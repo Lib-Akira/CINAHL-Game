@@ -14,6 +14,9 @@ const db=firebase.database(), app=document.getElementById('app'), $=s=>document.
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const fmt=ms=>{const s=Math.max(0,Math.round(ms/1000));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
 let uid=localStorage.getItem('cg_uid');if(!uid){uid='u'+Math.random().toString(36).slice(2,10)+Date.now().toString(36);localStorage.setItem('cg_uid',uid);}
+function shuf(arr,seed){let h=1779033703^seed.length;for(let i=0;i<seed.length;i++){h=Math.imul(h^seed.charCodeAt(i),3432918353);h=h<<13|h>>>19;}
+  const r=()=>{h=Math.imul(h^h>>>16,2246822507);h=Math.imul(h^h>>>13,3266489909);return((h^=h>>>16)>>>0)/4294967296};
+  const a=arr.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
 let name=localStorage.getItem('cg_name')||'', st={status:'waiting',round:1}, mine=null, offset=0, tick=null, subRef=null, lastRound=null;
 db.ref('.info/serverTimeOffset').on('value',s=>offset=s.val()||0);
 db.ref('game/state').on('value',s=>{st=s.val()||{status:'waiting',round:1};
@@ -29,19 +32,24 @@ function render(){
     $('#go').onclick=()=>{const f=$('#fn').value.trim(),l=$('#ln').value.trim();if(!f||!l)return alert('กรุณากรอกทั้งชื่อและสกุล');
       name=f+' '+l;localStorage.setItem('cg_name',name);if(subRef)subRef.update({name,ready:true});render();};
     return;}
-  if(mine&&mine.a1!==undefined){
-    app.innerHTML=`<div class="card c"><div class="big">✅</div><h2>ส่งคำตอบแล้ว</h2><p>ใช้เวลา ${mine.t&&st.startedAt?fmt(mine.t-st.startedAt):'-'} นาที<br><span class="mu">รอผู้สอนประกาศผล</span></p></div>`;return;}
+  if(mine&&mine.t){
+    app.innerHTML=`<div class="card c"><div class="big">✅</div><h2>ส่งคำตอบแล้ว</h2><p>ใช้เวลา ${st.startedAt?fmt(mine.t-st.startedAt):'-'} นาที<br><span class="mu">รอผู้สอนประกาศผล</span></p></div>`;return;}
   if(st.status==='running'){
+    const dk='cg_d_'+st.round, D=JSON.parse(localStorage.getItem(dk)||'{}'), qs=st.qs||[];
+    const mc=qs.map((q,i)=>`<div class="card"><h2>ข้อ ${i+2}</h2><div class="q">${esc(q.q)}</div>`+
+      shuf(q.opts||[],uid+i).map(o=>`<label style="display:block;margin:6px 0;padding:10px 12px;border:1px solid var(--bd);border-radius:10px;cursor:pointer"><input type="radio" name="m${i}" value="${esc(o)}" style="width:auto;margin-right:8px" ${D['m'+i]===o?'checked':''}>${esc(o)}</label>`).join('')+`</div>`).join('');
     app.innerHTML=`<h1>🔎 เริ่ม!</h1><p class="mu">${esc(name)} · เวลา <b id="clk">0:00</b></p>
-    <div class="card"><h2>ข้อ 1</h2><div class="q">${esc(st.q1)}</div><textarea id="a1" placeholder="วางผลการสืบค้นที่นี่"></textarea></div>
-    <div class="card"><h2>ข้อ 2</h2><div class="q">${esc(st.q2)}</div><textarea id="a2" placeholder="วางผลการสืบค้นที่นี่"></textarea></div>
+    <div class="card"><h2>ข้อ 1</h2><div class="q">${esc(st.q1)}</div><textarea id="a1" placeholder="วางผลการสืบค้นที่นี่">${esc(D.a1||'')}</textarea></div>${mc}
     <p><button id="send" style="width:100%">ส่งคำตอบ</button></p>`;
-    ['a1','a2'].forEach(k=>{const el=$('#'+k),key='cg_'+k+'_'+st.round;el.value=localStorage.getItem(key)||'';el.oninput=()=>localStorage.setItem(key,el.value);});
+    const save=()=>{const d={a1:$('#a1').value};qs.forEach((_,i)=>{const r=document.querySelector(`input[name=m${i}]:checked`);if(r)d['m'+i]=r.value;});localStorage.setItem(dk,JSON.stringify(d));return d;};
+    $('#a1').oninput=save;app.querySelectorAll('input[type=radio]').forEach(r=>r.onchange=save);
     tick=setInterval(()=>{const c=$('#clk');if(c)c.textContent=fmt(Date.now()+offset-st.startedAt);},1000);
-    $('#send').onclick=async()=>{const a1=$('#a1').value.trim(),a2=$('#a2').value.trim();
-      if(!a1&&!a2)return alert('ยังไม่ได้วางคำตอบ');
+    $('#send').onclick=async()=>{const d=save();
+      const blank=!d.a1.trim()||qs.some((_,i)=>!d['m'+i]);
+      if(blank&&!confirm('ยังตอบไม่ครบทุกข้อ ส่งเลยไหม?'))return;
       $('#send').disabled=true;
-      try{await subRef.set({name,ready:true,a1,a2,t:firebase.database.ServerValue.TIMESTAMP});localStorage.removeItem('cg_a1_'+st.round);localStorage.removeItem('cg_a2_'+st.round);}
+      const o={name,ready:true,a1:d.a1.trim(),t:firebase.database.ServerValue.TIMESTAMP};qs.forEach((_,i)=>o['a'+(i+2)]=d['m'+i]||'');
+      try{await subRef.set(o);localStorage.removeItem(dk);}
       catch(e){alert('ส่งไม่สำเร็จ ลองกดอีกครั้ง');$('#send').disabled=false;}};
     return;}
   if(st.status==='ended'){app.innerHTML=`<div class="card c"><h2>หมดเวลาแล้ว</h2></div>`;return;}
