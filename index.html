@@ -36,15 +36,17 @@ function render(){
     <div class="card"><h2>ข้อ 1</h2><div class="q">${esc(st.q1)}</div><textarea id="a1" placeholder="วางผลการสืบค้นที่นี่"></textarea></div>
     <div class="card"><h2>ข้อ 2</h2><div class="q">${esc(st.q2)}</div><textarea id="a2" placeholder="วางผลการสืบค้นที่นี่"></textarea></div>
     <p><button id="send" style="width:100%">ส่งคำตอบ</button></p>`;
+    ['a1','a2'].forEach(k=>{const el=$('#'+k),key='cg_'+k+'_'+st.round;el.value=localStorage.getItem(key)||'';el.oninput=()=>localStorage.setItem(key,el.value);});
     tick=setInterval(()=>{const c=$('#clk');if(c)c.textContent=fmt(Date.now()+offset-st.startedAt);},1000);
     $('#send').onclick=async()=>{const a1=$('#a1').value.trim(),a2=$('#a2').value.trim();
       if(!a1&&!a2)return alert('ยังไม่ได้วางคำตอบ');
       $('#send').disabled=true;
-      try{await subRef.set({name,ready:true,a1,a2,t:firebase.database.ServerValue.TIMESTAMP});}
+      try{await subRef.set({name,ready:true,a1,a2,t:firebase.database.ServerValue.TIMESTAMP});localStorage.removeItem('cg_a1_'+st.round);localStorage.removeItem('cg_a2_'+st.round);}
       catch(e){alert('ส่งไม่สำเร็จ ลองกดอีกครั้ง');$('#send').disabled=false;}};
     return;}
   if(st.status==='ended'){app.innerHTML=`<div class="card c"><h2>หมดเวลาแล้ว</h2></div>`;return;}
-  app.innerHTML=`<h1>🔎 ภารกิจนักสืบ CINAHL</h1><div class="card c"><h2>สวัสดี ${esc(name)}</h2><div class="big">⏳</div><p>รอผู้สอนกดเริ่ม...<br><span class="mu">เปิดฐานข้อมูล CINAHL เตรียมไว้ได้เลย</span></p></div>`;
+  app.innerHTML=`<h1>🔎 ภารกิจนักสืบ CINAHL</h1><div class="card c"><h2>สวัสดี ${esc(name)}</h2><div class="big">⏳</div><p>รอผู้สอนกดเริ่ม...<br><span class="mu">เปิดฐานข้อมูล CINAHL เตรียมไว้ได้เลย</span></p><p><button class="sec" id="rename">✏️ แก้ชื่อ</button></p></div>`;
+  $('#rename').onclick=()=>{name='';localStorage.removeItem('cg_name');render();};
 }
 render();
 </script></body></html>
