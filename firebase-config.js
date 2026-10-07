@@ -1,10 +1,9 @@
-// วางค่าจาก Firebase (Project settings > Your apps > Config) แทนค่าด้านล่าง
 const firebaseConfig = {
-  apiKey: "ใส่ค่าของคุณ",
-  authDomain: "ใส่ค่าของคุณ",
-  databaseURL: "ใส่ค่าของคุณ", // เช่น https://xxxx-default-rtdb.asia-southeast1.firebasedatabase.app
-  projectId: "ใส่ค่าของคุณ",
-  appId: "ใส่ค่าของคุณ"
+  apiKey: "AIzaSyBHMJ3ltX4aQEd9kUNCKSKAtSUznaZiewY",
+  authDomain: "cinahl-game.firebaseapp.com",
+  databaseURL: "https://cinahl-game-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "cinahl-game",
+  storageBucket: "cinahl-game.firebasestorage.app",
+  messagingSenderId: "494040033364",
+  appId: "1:494040033364:web:d56e7f1dc0be0f76cfe5c1"
 };
-// รหัสผ่านเข้าหน้าผู้สอน (host.html) เปลี่ยนเป็นของตัวเอง
-const HOST_PASSCODE = "cinahl2026";
