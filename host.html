@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="th"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>ผู้สอน - CINAHL</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head><body><main id="app"></main>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="firebase-config.js"></script>
+<script>
+firebase.initializeApp(firebaseConfig);
+const db=firebase.database(), app=document.getElementById('app'), $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const norm=s=>String(s||'').toLowerCase().replace(/[^a-z0-9ก-๙]+/g,'');
+const fmt=ms=>{const s=Math.max(0,Math.round(ms/1000));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
+let st={status:'waiting',round:1},subs={},marks={},subRef=null,lastRound=null;
+const K=JSON.parse(localStorage.getItem('cg_host')||'{}'); // โจทย์และเฉลยเก็บในเครื่องผู้สอนเท่านั้น
+const DEF={q1:'ค้นคำว่า Nursing Care ใน CINAHL เลือก Full Text และเรียงผลลัพธ์ให้ใหม่ล่าสุดก่อน แล้วคัดลอกชื่อบทความรายการแรกมาวาง',
+ q2:'ค้นคำว่า Pressure Ulcer Prevention เลือก Full Text, Peer Reviewed, ปี 2023-2026, ภาษา English แล้วคัดลอกรายการแรกมาวาง (ชื่อบทความและชื่อวารสาร)'};
+if(sessionStorage.getItem('cg_ok')!=='1'){
+  app.innerHTML=`<div class="card"><h2>🔒 หน้าผู้สอน</h2><input id="pw" type="password" placeholder="รหัสผ่าน"><p><button id="in">เข้า</button></p></div>`;
+  $('#in').onclick=()=>{if($('#pw').value===HOST_PASSCODE){sessionStorage.setItem('cg_ok','1');build();}else alert('รหัสไม่ถูกต้อง');};
+}else build();
+function build(){
+  app.innerHTML=`<h1>🧑‍🏫 แดชบอร์ดผู้สอน</h1>
+  <div class="card"><h2>ตั้งโจทย์และเฉลย</h2>
+  <label class="mu">โจทย์ข้อ 1</label><textarea id="q1"></textarea>
+  <label class="mu">เฉลยข้อ 1 (ชื่อบทความ)</label><input id="k1">
+  <label class="mu">โจทย์ข้อ 2</label><textarea id="q2"></textarea>
+  <label class="mu">เฉลยข้อ 2 (ชื่อบทความ)</label><input id="k2">
+  <p class="mu">เฉลยเก็บไว้ในเบราว์เซอร์เครื่องนี้เท่านั้น นักศึกษามองไม่เห็น</p>
+  <p><button class="sec" id="save">บันทึกโจทย์/เฉลย</button></p></div>
+  <div class="card c"><h2>สถานะ: <span id="lab"></span> (รอบที่ <span id="rd"></span>)</h2>
+  <p class="mu">เข้าห้องแล้ว <span id="rdy">0</span> คน · ส่งแล้ว <span id="cnt">0</span> คน</p>
+  <div class="row"><button id="start">▶ เริ่มพร้อมกัน</button><button class="sec" id="end">■ ปิดรับคำตอบ</button><button class="sec" id="next">↻ เริ่มรอบใหม่</button></div></div>
+  <div class="card"><h2>ผลการตอบ (เรียงตามคะแนน แล้วตามเวลา)</h2>
+  <p class="mu">ตรวจอัตโนมัติโดยดูว่าคำตอบมีชื่อบทความตามเฉลยอยู่หรือไม่ (ไม่สนตัวพิมพ์/เครื่องหมาย) แตะ ✓/✗ เพื่อแก้เอง</p>
+  <div class="tblw"><table><thead><tr><th>#</th><th>ชื่อ</th><th>เวลา</th><th>ข้อ1</th><th>ข้อ2</th><th>คะแนน</th></tr></thead><tbody id="tb"></tbody></table></div></div>`;
+  $('#q1').value=K.q1||DEF.q1;$('#q2').value=K.q2||DEF.q2;$('#k1').value=K.k1||'';$('#k2').value=K.k2||'';
+  const save=()=>{Object.assign(K,{q1:$('#q1').value,q2:$('#q2').value,k1:$('#k1').value,k2:$('#k2').value});
+    localStorage.setItem('cg_host',JSON.stringify(K));renderTable();};
+  $('#save').onclick=()=>{save();$('#save').textContent='บันทึกแล้ว ✓';setTimeout(()=>$('#save').textContent='บันทึกโจทย์/เฉลย',1500);};
+  $('#start').onclick=()=>{save();db.ref('game/state').update({status:'running',round:st.round||1,q1:K.q1,q2:K.q2,startedAt:firebase.database.ServerValue.TIMESTAMP});};
+  $('#end').onclick=()=>db.ref('game/state').update({status:'ended'});
+  $('#next').onclick=()=>{if(confirm('เริ่มรอบใหม่? ผลรอบนี้จะถูกซ่อน'))db.ref('game/state').update({status:'waiting',round:(st.round||1)+1,startedAt:null});};
+  db.ref('game/state').on('value',s=>{st=s.val()||{status:'waiting',round:1};
+    $('#lab').textContent={waiting:'รอเริ่ม',running:'กำลังแข่ง',ended:'จบรอบ'}[st.status]||'';
+    $('#rd').textContent=st.round||1;$('#start').disabled=st.status==='running';$('#end').disabled=st.status!=='running';
+    if(st.round!==lastRound){lastRound=st.round;subs={};if(subRef)subRef.off();
+      subRef=db.ref('subs/'+st.round);subRef.on('value',x=>{subs=x.val()||{};renderTable();});}
+    renderTable();});
+}
+const ok=(a,k)=>!!norm(k)&&norm(a).includes(norm(k));
+function renderTable(){
+  const tb=$('#tb');if(!tb)return;
+  const all=Object.entries(subs).map(([id,s])=>({id,...s}));
+  $('#rdy').textContent=all.length;
+  const rows=all.filter(s=>s.t).map(s=>{
+    const m1=marks[s.id+'1']??ok(s.a1,K.k1),m2=marks[s.id+'2']??ok(s.a2,K.k2);
+    return{...s,m1,m2,score:(m1?1:0)+(m2?1:0),el:s.t-(st.startedAt||s.t)};
+  }).sort((a,b)=>b.score-a.score||a.el-b.el);
+  $('#cnt').textContent=rows.length;
+  tb.innerHTML=rows.length?rows.map((r,i)=>`<tr><td>${i+1}${i===0&&r.score>0?' 🏆':''}</td><td>${esc(r.name)}</td><td>${fmt(r.el)}</td>
+  <td><span class="mk ${r.m1?'ok':'no'}" data-k="${r.id}1" data-v="${r.m1}">${r.m1?'✓':'✗'}</span><div class="ans">${esc(r.a1)}</div></td>
+  <td><span class="mk ${r.m2?'ok':'no'}" data-k="${r.id}2" data-v="${r.m2}">${r.m2?'✓':'✗'}</span><div class="ans">${esc(r.a2)}</div></td>
+  <td><b>${r.score}/2</b></td></tr>`).join(''):'<tr><td colspan="6" class="mu">ยังไม่มีคนส่ง</td></tr>';
+  tb.querySelectorAll('.mk').forEach(e=>e.onclick=()=>{marks[e.dataset.k]=e.dataset.v!=='true';renderTable();});
+}
+</script></body></html>
