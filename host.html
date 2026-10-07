@@ -32,13 +32,13 @@ if(sessionStorage.getItem('cg_ok')!=='1'){
 function build(){
   const mcHtml=D.mc.map((m,i)=>`<hr><label class="mu">โจทย์ข้อ ${i+2} (ตัวเลือก)</label><textarea id="mq${i}">${esc(m.q)}</textarea>
   <label class="mu">✅ ตัวเลือกที่ถูก</label><input id="mc${i}" class="sec" type="password" autocomplete="off" value="${esc(m.correct)}">
-  <label class="mu">❌ ตัวเลือกที่ผิด 3 ข้อ</label>${[0,1,2].map(j=>`<input id="mw${i}_${j}" value="${esc(m.w[j]||'')}" style="margin-bottom:6px">`).join('')}`).join('');
+  <label class="mu">❌ ตัวเลือกที่ผิด 3 ข้อ</label>${[0,1,2].map(j=>`<input id="mw${i}_${j}" class="sec" type="password" autocomplete="off" value="${esc(m.w[j]||'')}" style="margin-bottom:6px">`).join('')}`).join('');
   app.innerHTML=`<h1>🧑‍🏫 แดชบอร์ดผู้สอน</h1>
   <details class="card" id="setup"><summary style="cursor:pointer"><b>⚙️ ตั้งโจทย์และเฉลย</b> <span class="mu">(กดเพื่อเปิด/ปิด)</span></summary>
   <label class="mu">โจทย์ข้อ 1 (แบบกรอก)</label><textarea id="q1" style="min-height:140px"></textarea>
   <label class="mu">เฉลยข้อ 1 (ชื่อบทความ)</label><input id="k1" class="sec" type="password" autocomplete="off">
   ${mcHtml}
-  <p class="mu">เฉลยแสดงเป็นจุด และเก็บไว้ในเบราว์เซอร์เครื่องนี้เท่านั้น ระบบจะสลับลำดับตัวเลือกให้นักศึกษาแต่ละคนอัตโนมัติ</p>
+  <p class="mu">เฉลยและตัวเลือกที่ผิดแสดงเป็นจุด และเก็บไว้ในเบราว์เซอร์เครื่องนี้เท่านั้น ระบบจะสลับลำดับตัวเลือกให้นักศึกษาแต่ละคนอัตโนมัติ</p>
   <p class="row"><button class="sec" id="save">บันทึกโจทย์/เฉลย</button><button class="sec" id="peek">👁 แสดงเฉลย</button></p></details>
   <div class="card c"><h2>สถานะ: <span id="lab"></span></h2>
   <p class="mu">เข้าห้องแล้ว <span id="rdy">0</span> คน · ส่งแล้ว <span id="cnt">0</span> คน</p>
