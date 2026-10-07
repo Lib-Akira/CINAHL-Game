@@ -80,7 +80,7 @@ function renderTable(){
   }).sort((a,b)=>b.score-a.score||a.el-b.el);
   $('#cnt').textContent=rows.length;
   const cell=(r,i,txt)=>`<td><span class="mk ${r.m[i]?'ok':'no'}" data-k="${r.id}${i}" data-v="${r.m[i]}">${r.m[i]?'✓':'✗'}</span><div class="ans">${esc(txt)}</div></td>`;
-  tb.innerHTML=rows.length?rows.map((r,i)=>`<tr><td>${i+1}${i===0&&r.score>0?' 🏆':''}</td><td>${esc(r.name)}</td><td>${fmt(r.el)}</td>${cell(r,0,r.a1)}${cell(r,1,r.a2)}${cell(r,2,r.a3)}${cell(r,3,r.a4)}<td><b>${r.score}/4</b></td></tr>`).join(''):'<tr><td colspan="8" class="mu">ยังไม่มีคนส่ง</td></tr>';
+  tb.innerHTML=rows.length?rows.map((r,i)=>`<tr><td>${i+1}${r.score>0?['🥇','🥈','🥉'][i]?' '+['🥇','🥈','🥉'][i]:'':''}</td><td>${esc(r.name)}</td><td>${fmt(r.el)}</td>${cell(r,0,r.a1)}${cell(r,1,r.a2)}${cell(r,2,r.a3)}${cell(r,3,r.a4)}<td><b>${r.score}/4</b></td></tr>`).join(''):'<tr><td colspan="8" class="mu">ยังไม่มีคนส่ง</td></tr>';
   tb.querySelectorAll('.mk').forEach(e=>e.onclick=()=>{marks[e.dataset.k]=e.dataset.v!=='true';renderTable();});
 }
 </script></body></html>
