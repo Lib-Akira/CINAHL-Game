@@ -32,9 +32,9 @@ function build(){
   <label class="mu">เฉลยข้อ 2 (ชื่อบทความ)</label><input id="k2" type="password" autocomplete="off">
   <p class="mu">เฉลยแสดงเป็นจุด และเก็บไว้ในเบราว์เซอร์เครื่องนี้เท่านั้น</p>
   <p class="row"><button class="sec" id="save">บันทึกโจทย์/เฉลย</button><button class="sec" id="peek">👁 แสดงเฉลย</button></p></details>
-  <div class="card c"><h2>สถานะ: <span id="lab"></span> (รอบที่ <span id="rd"></span>)</h2>
+  <div class="card c"><h2>สถานะ: <span id="lab"></span></h2>
   <p class="mu">เข้าห้องแล้ว <span id="rdy">0</span> คน · ส่งแล้ว <span id="cnt">0</span> คน</p>
-  <div class="row"><button id="start">▶ เริ่มพร้อมกัน</button><button class="sec" id="end">■ ปิดรับคำตอบ</button><button class="sec" id="next">↻ เริ่มรอบใหม่</button></div></div>
+  <div class="row"><button id="start">▶ เริ่มพร้อมกัน</button><button class="sec" id="end">■ ปิดรับคำตอบ</button><button class="sec" id="next">↻ รีเซ็ต (ล้างผล)</button></div></div>
   <div class="card"><h2>ผลการตอบ (เรียงตามคะแนน แล้วตามเวลา) <button class="sec" id="hide" style="font-size:.8rem;padding:4px 10px">🙈 ซ่อนตาราง</button></h2><div id="res">
   <p class="mu">ตรวจอัตโนมัติโดยดูว่าคำตอบมีชื่อบทความตามเฉลยอยู่หรือไม่ (ไม่สนตัวพิมพ์/เครื่องหมาย) แตะ ✓/✗ เพื่อแก้เอง</p>
   <div class="tblw"><table><thead><tr><th>#</th><th>ชื่อ</th><th>เวลา</th><th>ข้อ1</th><th>ข้อ2</th><th>คะแนน</th></tr></thead><tbody id="tb"></tbody></table></div></div></div>`;
@@ -47,10 +47,10 @@ function build(){
   $('#setup').open=!K.k1;
   $('#start').onclick=()=>{save();db.ref('game/state').update({status:'running',round:st.round||1,q1:K.q1,q2:K.q2,startedAt:firebase.database.ServerValue.TIMESTAMP});};
   $('#end').onclick=()=>db.ref('game/state').update({status:'ended'});
-  $('#next').onclick=()=>{if(confirm('เริ่มรอบใหม่? ผลรอบนี้จะถูกซ่อน'))db.ref('game/state').update({status:'waiting',round:(st.round||1)+1,startedAt:null});};
+  $('#next').onclick=()=>{if(confirm('รีเซ็ตเกม? ผลที่ส่งมาแล้วจะถูกซ่อน'))db.ref('game/state').update({status:'waiting',round:(st.round||1)+1,startedAt:null});};
   db.ref('game/state').on('value',s=>{st=s.val()||{status:'waiting',round:1};
     $('#lab').textContent={waiting:'รอเริ่ม',running:'กำลังแข่ง',ended:'จบรอบ'}[st.status]||'';
-    $('#rd').textContent=st.round||1;$('#start').disabled=st.status==='running';$('#end').disabled=st.status!=='running';
+    $('#start').disabled=st.status==='running';$('#end').disabled=st.status!=='running';
     if(st.round!==lastRound){lastRound=st.round;subs={};if(subRef)subRef.off();
       subRef=db.ref('subs/'+st.round);subRef.on('value',x=>{subs=x.val()||{};renderTable();});}
     renderTable();});
